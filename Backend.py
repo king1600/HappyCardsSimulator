@@ -9,6 +9,9 @@ class Backend(object):
 	CACHE_FILE = "cache.json"
 
 	classes  = ["warrior","cleric","mage"]
+	strongs  = ['aid','slayer','Anti-Guard']
+	intenses = ['intens','far','reach','super','fast','longer']
+	goods    = ['3','effect','weight','crush']
 
 	is_spremium   = False
 	is_high_buff  = False
@@ -22,14 +25,15 @@ class Backend(object):
 	}
 
 	def __init__(self):
+		self.buffs = BUFFS
 		self.load_cache()
-		self.pick_random_type()
+		#self.pick_random_type()
 
 	def load_cache(self):
 		with open(self.CACHE_FILE, 'r') as f:
 			self.data = json.loads( f.read() )
 
-		self.get_random_item("weapon")
+		#self.get_random_item("weapon")
 
 	def get_random_item(self, itemtype):
 		# item_entry =  (item name, item info, random buff)
@@ -42,12 +46,16 @@ class Backend(object):
 		for x in [1,2,3]:
 
 			# generate item choices based on weight
-			item_choices = self.data[status[0]][itemtype]
+			if itemtype in ['shield','acc']:
+				item_choices = self.data[itemtype]
+			else:
+				item_choices = self.data[status[0]][itemtype]
 			_choices = list([ z for z in item_choices ])
 			good = {}
 
 			for y in _choices:
 				data = item_choices[y]
+				is_sp = False
 
 				# normal premiums
 				if x in [1,2]:
@@ -57,6 +65,7 @@ class Backend(object):
 
 				# super premiums
 				else:
+					is_sp = True
 					mx_w = self.correct_weight(itemtype, status[1])
 					if status[1]:
 						if data['weight'] >= mx_w and data['weight'] <= 10:
@@ -70,15 +79,136 @@ class Backend(object):
 			random.shuffle( available )
 			item_name = random.choice(available)
 
+			rand_buff = self.get_random_buff(status[0], itemtype, status, good[item_name]['buffs'], is_sp)
+
 			# add to items to display
-			ITEMS.append( [item_name, good[item_name], None])
+			ITEMS.append( [item_name, good[item_name], rand_buff])
 
 		for x in ITEMS:
-			print x[0], x[1]['weight']
+			print x[0], x[-1]
 
 		return ITEMS
 
+	def get_random_buff(self, classname, itemtype, status, has_buffs, is_sp):
+		choices = self.buffs[itemtype]
+
+		if itemtype in ['armor','weapon','helmet']:
+			random.shuffle(self.buffs[itemtype]['all'])
+			good = []
+
+			# intensify buff
+			try:
+				if status[4] and is_sp:
+					good = []
+					for x in choices['all']:
+						for y in self.intenses:
+							if y in x.lower():
+								good.append(x)
+				return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
+			except Exception as e:
+				print "Error on intense: " + str(e)
+
+			# slayer worthy
+			try:
+				if status[3] and is_sp:
+					for x in choices['all']:
+						for y in self.strongs:
+							if y in x.lower():
+								good.append(y)
+					return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
+			except Exception as e:
+				print "Error on Slayers: " + str(e)
+
+			# strong buff
+			try:
+				if status[1] or status[2]:
+					if is_sp:
+						good = []
+						for x in choices['all']:
+							for y in self.goods:
+								if y in x.lower(): good.append(x)
+										
+						return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
+			except Exception as e:
+				print "Error on Strong: " + str(e)
+
+			# other
+			try:
+				good = choices['all']
+				for x in good:
+					for y in self.goods:
+						if y.lower() in x:
+							good.remove(x)
+
+				for x in good:
+					if x in self.strongs or x in self.intenses:
+						good.pop(good.index(x))
+				good += self.buffs[itemtype][classname+'-exclusive']
+				random.shuffle(good)
+				return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
+			except Exception as e:
+				print "Error on Normal: " + str(e)
+
+		### Case Shield ###
+		if itemtype == 'shield':
+			goods = ['Fast Guard Attack','Guard move Speed up','Spartan Uppercut']
+			random.shuffle(goods)
+			if status[3]:
+				return self.filter_if_there(good, has_buffs)
+			else:
+				random.shuffle(choices)
+				while True:
+					buff = random.choice(choices)
+					if buff not in goods: break
+				return self.filter_if_there([buff], has_buffs, self.buffs[itemtype])
+
+		if itemtype == 'acc':
+			if status[3] and is_sp:
+				good = [x for x in choices if '3' in x.lower() or 'weight' in x.lower()]
+				return self.filter_if_there(good, has_buffs, self.buffs[itemtype])
+			else:
+				good = [x for x in choices if '3' not in x.lower() or 'weight' not in x.lower()]
+				return self.filter_if_there(good, has_buffs, self.buffs[itemtype])
+
+	def filter_if_there(self, good, has_buffs, others):
+		try:
+			random.shuffle(good)
+			#good = self.remove_strongs(good)
+			for x in range(5):
+				has = False
+				c = random.choice(good)
+				for x in has_buffs:
+					if c.lower() in x.lower():
+						pass
+					else: has = True
+				if has: break
+			return c
+		except Exception as e:
+			new = self.remove_strongs(others)
+			return random.choice(new)
+
+	def remove_strongs(self, others):
+		for x in others:
+			has_removed = False
+			for y in self.intenses:
+				if y.lower() in x.lower():
+					others.remove(x)
+					has_removed = True
+			for y in self.strongs:
+				if y.lower() in x.lower():
+					if not has_removed:
+						others.remove(x)
+						has_removed = True
+			for y in self.goods:
+				if y.lower() in x.lower():
+					if not has_removed:
+						others.remove(x)
+						has_removed = True
+		return others
+
+
 	def correct_weight(self, itemtype, is_sp):
+		# Decide what is the max or min weight of item for choices
 		if itemtype == "weapon":
 			if is_sp: lowest_weight = 9
 			else: lowest_weight = 7

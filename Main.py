@@ -19,30 +19,59 @@ class MainWindow(QWidget):
 		self.create_colors()
 		self.draw_bg(self.current_color)
 		self.create_widgets()
-		#self.create_backend()
+		self.create_backend()
 
 		self.bind_signals()
+		#self.backend.get_random_item('armor')
 
 	def initUI(self):
 		self.resize(self.WIDTH, self.HEIGHT)
 		self.setFixedSize(QSize(self.WIDTH,self.HEIGHT))
 		self.setWindowTitle("Happy Cards Simulator")
 
+		with open('stylesheet.css','r') as f:
+			self.setStyleSheet(f.read())
+
 	def create_widgets(self):
+		self.tickets = 400
+		self._tickets = Tickets(str(self.tickets), self)
+		self._tickets.move(520,50)
+
 		red = ItemCliker("",self,"red","weapon")
 		red.move(115, 140)
+		red.clicked.connect(self.generate_card)
 
 		yellow = ItemCliker("",self,"yellow","shield")
 		yellow.move(235, 210)
+		yellow.clicked.connect(self.generate_card)
 
 		purple = ItemCliker("",self,"purple","armor")
 		purple.move(100, 285)
+		purple.clicked.connect(self.generate_card)
 
 		green = ItemCliker("",self,"green","helmet")
 		green.move(200, 375)
+		green.clicked.connect(self.generate_card)
 
 		blue = ItemCliker("",self,"blue","acc")
 		blue.move(120, 470)
+		blue.clicked.connect(self.generate_card)
+
+		for i in range(12): #405
+			mv = 30 * i + 405
+			star_frag = StarFragment('',self)
+			star_frag.turn_off.emit()
+			star_frag.move(mv,484)
+
+	def generate_card(self, color):
+		if color == 'red': itemtype = "weapon"
+		elif color == 'yellow': itemtype = "shield"
+		elif color == 'green': itemtype = "helmet"
+		elif color == 'blue': itemtype = "acc"
+		elif color == 'purple': itemtype = "armor"
+		else: itemtype = "weapon"
+
+		self.backend.get_random_item(itemtype)
 
 	def bind_signals(self):
 		self.change_color.connect(self.draw_bg)

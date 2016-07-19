@@ -122,10 +122,10 @@ class Fetcher(object):
 	def create_shield_data(self, cname, info):
 		item_data = self.create_item_data(info)
 
-		item_data['guard'] = int(self.filter_range(info[3].text))
-		item_data['mguard'] = int(self.filter_range(info[4].text))
-		item_data['guard_10'] = int(self.filter_range(info[5].text))
-		item_data['mguard_10'] = int(self.filter_range(info[6].text))
+		item_data['Guard power'] = int(self.filter_range(info[3].text))
+		item_data['Magic guard'] = int(self.filter_range(info[4].text))
+		item_data['Guard power lv10'] = int(self.filter_range(info[5].text))
+		item_data['Magic guard lv10'] = int(self.filter_range(info[6].text))
 		item_data['slots'] = int(info[7].text)
 		# get array of buffs
 		item_data['buffs'] = [b for b in info[8].find_all('span')[0] if b not in [u"<br/>",u"None"]]
@@ -140,10 +140,10 @@ class Fetcher(object):
 	def create_armor_data(self, cname, info):
 		item_data = self.create_item_data(info)
 
-		item_data['def'] = int(self.filter_range(info[3].text))
-		item_data['mdef'] = int(self.filter_range(info[4].text))
-		item_data['def_10'] = int(self.filter_range(info[5].text))
-		item_data['mdef_10'] = int(self.filter_range(info[6].text))
+		item_data['Defense'] = int(self.filter_range(info[3].text))
+		item_data['Magic Defense'] = int(self.filter_range(info[4].text))
+		item_data['Defense lv10'] = int(self.filter_range(info[5].text))
+		item_data['Magic Defense 10'] = int(self.filter_range(info[6].text))
 		item_data['slots'] = int(info[7].text)
 		# get array of buffs
 		item_data['buffs'] = [b for b in info[8].find_all('span')[0] if b not in [u"<br/>",u"None"]]
@@ -157,11 +157,11 @@ class Fetcher(object):
 		item_data = self.create_item_data(info)
 
 		if cname == 'mage':
-			item_data['base_attack'] = int(self.filter_range(info[3].text))
-			item_data['lv10_attack'] = int(self.filter_range(info[5].text))
+			item_data['Attack'] = int(self.filter_range(info[3].text))
+			item_data['Attack lv10'] = int(self.filter_range(info[5].text))
 			item_data['slots']       = int(info[7].text)
-			item_data['magic_base']  = int(self.filter_range(info[4].text))
-			item_data['magic_10']    = int(self.filter_range(info[6].text))
+			item_data['Magic Attack']  = int(self.filter_range(info[4].text))
+			item_data['Magic Attack lv10']    = int(self.filter_range(info[6].text))
 			# get array of buffs
 			try:
 				item_data['buffs'] = [re.sub(r'[^\w]','',b) for b in info[8].find_all('span')[0] if b not in [u"<br/>",u"None"]]
@@ -170,11 +170,11 @@ class Fetcher(object):
 			item_data['buffs'] = self.filter_buffs(item_data['buffs'])
 
 		else:			
-			item_data['base_attack'] = int(self.filter_range(info[3].text))
-			item_data['lv10_attack'] = int(self.filter_range(info[4].text))
+			item_data['Attack'] = int(self.filter_range(info[3].text))
+			item_data['Attack lv10'] = int(self.filter_range(info[4].text))
 			item_data['slots']       = int(info[5].text)
-			item_data['magic_base']  = 0
-			item_data['magic_10']    = 0
+			item_data['Magic Attack']  = 0
+			item_data['Magic Attack lv10']    = 0
 			# get array of buffs
 			item_data['buffs'] = [b for b in info[6].find_all('span')[0] if b not in [u"<br/>",u"None"]]
 			item_data['buffs'] = self.filter_buffs(item_data['buffs'])
