@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import copy
 import threading
 
 from Buffs import BUFFS
@@ -11,7 +12,7 @@ class Backend(object):
 	classes  = ["warrior","cleric","mage"]
 	strongs  = ['aid','slayer','Anti-Guard']
 	intenses = ['intens','far','reach','super','fast','longer']
-	goods    = ['3','effect','weight','crush']
+	goods    = ['3','effect','weight','crush','dash attack']
 
 	is_spremium   = False
 	is_high_buff  = False
@@ -35,11 +36,10 @@ class Backend(object):
 
 		#self.get_random_item("weapon")
 
-	def get_random_item(self, itemtype):
+	def get_random_item(self, itemtype, force_sp=False):
 		# item_entry =  (item name, item info, random buff)
 		# return 3 item entries (normal, normal, prem or sp)
 		status = self.pick_random_type()
-		print "is sp: "+repr(status[1])
 
 		ITEMS = []
 
@@ -52,10 +52,10 @@ class Backend(object):
 				item_choices = self.data[status[0]][itemtype]
 			_choices = list([ z for z in item_choices ])
 			good = {}
+			is_sp = False
 
 			for y in _choices:
 				data = item_choices[y]
-				is_sp = False
 
 				# normal premiums
 				if x in [1,2]:
@@ -67,7 +67,7 @@ class Backend(object):
 				else:
 					is_sp = True
 					mx_w = self.correct_weight(itemtype, status[1])
-					if status[1]:
+					if status[1] or force_sp:
 						if data['weight'] >= mx_w and data['weight'] <= 10:
 							good[y] = data
 					else:
@@ -79,133 +79,131 @@ class Backend(object):
 			random.shuffle( available )
 			item_name = random.choice(available)
 
-			rand_buff = self.get_random_buff(status[0], itemtype, status, good[item_name]['buffs'], is_sp)
+			rand_buff = self.get_random_buff(itemtype, status, good[item_name], is_sp)
 
 			# add to items to display
 			ITEMS.append( [item_name, good[item_name], rand_buff])
 
-		for x in ITEMS:
-			print x[0], x[-1]
+		#for x in ITEMS:
+		#	print x[0], x[-1]
 
-		return ITEMS
+		return (ITEMS, status[1])
 
-	def get_random_buff(self, classname, itemtype, status, has_buffs, is_sp):
-		choices = self.buffs[itemtype]
+	def get_random_buff(self, itemtype, status, info, is_sp):
 
+		# generate choices
+		if itemtype not in ['shield','acc']: choices = self.buffs[itemtype]['all']
+		else: choices = self.buffs[itemtype]
+
+		# randomize buff choices
+		random.shuffle(choices)
+
+		### Case Armor, weapon, or helmet
 		if itemtype in ['armor','weapon','helmet']:
-			random.shuffle(self.buffs[itemtype]['all'])
-			good = []
+			good = [] # list of possible choices after filter
 
-			# intensify buff
-			try:
-				if status[4] and is_sp:
-					good = []
-					for x in choices['all']:
-						for y in self.intenses:
-							if y in x.lower():
-								good.append(x)
-				return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
-			except Exception as e:
-				print "Error on intense: " + str(e)
+			# check if its premium or super premium
+			if is_sp:
+				# intensify buff
+				if status[4]:
+					return self.check_if_already(good, info, choices)
 
-			# slayer worthy
-			try:
-				if status[3] and is_sp:
-					for x in choices['all']:
-						for y in self.strongs:
-							if y in x.lower():
-								good.append(y)
-					return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
-			except Exception as e:
-				print "Error on Slayers: " + str(e)
+				# slayer worthy
+				if status[3]:
+					good = self.remove_type(choices, self.intenses) # remove intense buffs
+					return self.check_if_already(good, info, choices)
 
-			# strong buff
-			try:
-				if status[1] or status[2]:
-					if is_sp:
-						good = []
-						for x in choices['all']:
-							for y in self.goods:
-								if y in x.lower(): good.append(x)
-										
-						return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
-			except Exception as e:
-				print "Error on Strong: " + str(e)
+				# strong buff
+				if status[2]:
+					good = self.remove_type(choices, self.intenses) # remove slayers,etc
+					good = self.remove_type(good, self.strongs) # remove intense buffs
+					return self.check_if_already(good, info, choices)
 
-			# other
-			try:
-				good = choices['all']
-				for x in good:
-					for y in self.goods:
-						if y.lower() in x:
-							good.remove(x)
+				# other
+				for i in [self.intenses, self.strongs, self.goods]: # remove all good buffs
+					good = self.remove_type(good, i)
+				return self.check_if_already(good, info, choices)
 
-				for x in good:
-					if x in self.strongs or x in self.intenses:
-						good.pop(good.index(x))
-				good += self.buffs[itemtype][classname+'-exclusive']
-				random.shuffle(good)
-				return self.filter_if_there(good, has_buffs, self.buffs[itemtype]['all'])
-			except Exception as e:
-				print "Error on Normal: " + str(e)
+			else: # case its a normal item
+				pass
+
+			# add class exclusives
+			good = copy.deepcopy(choices)
+			good += self.buffs[itemtype][status[0]+"-exclusive"]
+			good = self.remove_all(good)
+			return random.choice(good)
 
 		### Case Shield ###
 		if itemtype == 'shield':
 			goods = ['Fast Guard Attack','Guard move Speed up','Spartan Uppercut']
-			random.shuffle(goods)
-			if status[3]:
-				return self.filter_if_there(good, has_buffs)
+			
+			if is_sp:
+				if status[3]:
+					return self.check_if_already(choices, info, choices) # can get anything
+				else:
+					good = copy.deepcopy(choices)
+					good = self.remove_type( good, goods ) # remove good shield buffs
+					return self.check_if_already(good, info, choices)
 			else:
-				random.shuffle(choices)
-				while True:
-					buff = random.choice(choices)
-					if buff not in goods: break
-				return self.filter_if_there([buff], has_buffs, self.buffs[itemtype])
+				good = copy.deepcopy(choices)
+				good = self.remove_type(choices, goods) #remove good shield buffs
+				good = self.remove_all(good)
+				return self.check_if_already(good, info, choices)
 
+		### Case Accessory ###
 		if itemtype == 'acc':
-			if status[3] and is_sp:
-				good = [x for x in choices if '3' in x.lower() or 'weight' in x.lower()]
-				return self.filter_if_there(good, has_buffs, self.buffs[itemtype])
+			if is_sp:
+
+				if status[2]:
+					good = []
+					for x in choices: # only lv 3 buffs
+						for y in self.goods:
+							if y.lower() in x.lower():
+								good.append(x)
+					return self.check_if_already(good, info, choices)
+
+				good = copy.deepcopy(choices)
+				good = self.remove_type(good, self.goods) # remove lv3 buffs
+				return self.check_if_already(good, info, choices)
 			else:
-				good = [x for x in choices if '3' not in x.lower() or 'weight' not in x.lower()]
-				return self.filter_if_there(good, has_buffs, self.buffs[itemtype])
+				good = copy.deepcopy(choices)
+				good = self.remove_all(good)
+				return self.check_if_already(good, info, choices)
 
-	def filter_if_there(self, good, has_buffs, others):
+	def check_if_already(self, goodlist, info, backup):
 		try:
-			random.shuffle(good)
-			#good = self.remove_strongs(good)
-			for x in range(5):
-				has = False
-				c = random.choice(good)
-				for x in has_buffs:
-					if c.lower() in x.lower():
-						pass
-					else: has = True
-				if has: break
-			return c
-		except Exception as e:
-			new = self.remove_strongs(others)
-			return random.choice(new)
+			tries = 5
+			for a in range(tries):
+				isgood = True
+				test = random.choice(goodlist)
+				for x in info['buffs']:
+					if test.lower() in x.lower():
+						isgood = False
+					if ''.join(test.lower().split()) in x.lower():
+						isgood = False
+				if isgood:
+					break
+			return test
+		except:
+			try:
+				return random.choice(goodlist)
+			except:
+				return random.choice(backup)
 
-	def remove_strongs(self, others):
-		for x in others:
-			has_removed = False
-			for y in self.intenses:
-				if y.lower() in x.lower():
-					others.remove(x)
-					has_removed = True
-			for y in self.strongs:
-				if y.lower() in x.lower():
-					if not has_removed:
-						others.remove(x)
-						has_removed = True
-			for y in self.goods:
-				if y.lower() in x.lower():
-					if not has_removed:
-						others.remove(x)
-						has_removed = True
-		return others
+	def remove_all(self, good):
+		for i in [self.intenses, self.strongs, self.goods]: # remove all good buffs
+			good = self.remove_type(good, i)
+		return good
 
+	def remove_type(self, mylist, _type):
+		newlist = copy.deepcopy(mylist)
+		for x in newlist:
+			for y in _type:
+				if y.lower() in x.lower():
+					try:
+						newlist.remove(x)
+					except: pass
+		return newlist
 
 	def correct_weight(self, itemtype, is_sp):
 		# Decide what is the max or min weight of item for choices
@@ -227,7 +225,7 @@ class Backend(object):
 		return lowest_weight
 
 	def pick_random_type(self):
-		# returns tuple (class, is_sp, is_high, is_strong, is_intense)
+		# returns tuple (class, is_sp, is_high, is_super, is_intense)
 
 		random.shuffle(self.classes)
 		r_class = random.choice(self.classes)

@@ -1,7 +1,6 @@
 BUFFS = {
     "weapon":{
         "all":[
-            "Dash Attack Power-Up",
             "Anti-Material 3",
             "Anti-Material 2",
             "Attack up 3",
@@ -35,6 +34,7 @@ BUFFS = {
             "Weight reliever"
         ],
         "warrior-exclusive":[
+            "Dash Attack Power-Up",
             "Charge attack +",
             "Spinning blade +",
             "Rush +"
@@ -43,11 +43,10 @@ BUFFS = {
             "Farther Thunderbolt",
             "Farther Fireball",
             "Farther Ice",
-            "Farther Wind blast",
             "Wind Enchant +",
             "Ice Enchant +",
             "Lightning Enchant +",
-            "Fire Enchant +",
+            "Fire Enchant +"
         ],
         "cleric-exclusive":[
             "Sanctuary",
@@ -140,10 +139,10 @@ BUFFS = {
             "HP & AP Recov 3",
             "HP & AP Recov 2",
             "Reduce Status Effect",
-            "Shield Charge",
             'Intensify HP'
         ],
         "warrior-exclusive": [
+            "Shield Charge",
             'Rocket man +',
             'Super Guard +'
         ],

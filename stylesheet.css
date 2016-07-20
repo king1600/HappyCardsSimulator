@@ -4,3 +4,12 @@
 	font-family: "Consolas";
 	color: #F9FF7D;
 }
+
+.ItemFrame {
+	background-color: #383838;
+}
+
+.ItemFrame QLabel {
+	color: white;
+	font-size: 18px;
+}
