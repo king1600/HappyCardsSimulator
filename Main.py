@@ -7,7 +7,7 @@ try:
 	from PySide.QtGui import *
 	from PySide.QtCore import *
 except:
-	os.system("C:\\Python\\Scripts\\pip.exe install PySide")
+	os.system("C:\\Python27\\Scripts\\pip.exe install PySide")
 	raw_input("\n\nRestart Program!")
 	sys.exit()
 
